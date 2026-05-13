@@ -31,3 +31,6 @@ DerivedData/
 
 # Cursor
 .cursor/
+
+# Local agent skills (not shipped with the app)
+.skills/
