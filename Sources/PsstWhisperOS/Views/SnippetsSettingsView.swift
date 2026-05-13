@@ -1,11 +1,11 @@
 import SwiftUI
 
-// MARK: - Snippet Model
+// MARK: - Snippet Model (prompts use the same persistence key `snippets`)
 
 struct Snippet: Codable, Identifiable {
     let id: UUID
-    var trigger: String    // what user says
-    var expansion: String  // what gets inserted
+    var trigger: String
+    var expansion: String
 
     init(id: UUID = UUID(), trigger: String = "", expansion: String = "") {
         self.id = id
@@ -14,16 +14,15 @@ struct Snippet: Codable, Identifiable {
     }
 }
 
-// MARK: - Snippets Settings View
+// MARK: - Prompts Settings View
 
 struct SnippetsSettingsView: View {
-    @EnvironmentObject var appState: AppState
     @State private var snippets: [Snippet] = []
     @State private var editingSnippetID: UUID?
     @State private var searchText = ""
-    @State private var bannerDismissed = UserDefaults.standard.bool(forKey: "snippetsBannerDismissed")
+    @AppStorage(StorageKeys.snippetsBannerDismissed) private var bannerDismissed: Bool = false
 
-    private let storageKey = "snippets"
+    private let storageKey = StorageKeys.snippets
 
     private var filteredSnippets: [Snippet] {
         if searchText.isEmpty { return snippets }
@@ -35,108 +34,136 @@ struct SnippetsSettingsView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            // Header
-            HStack {
-                Text("Snippets")
-                    .font(.title2)
-                    .fontWeight(.semibold)
-                Spacer()
-                Button(action: addSnippet) {
-                    Text("Add new")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 6)
-                        .background(RoundedRectangle(cornerRadius: 8).fill(Color.primary))
-                }
-                .buttonStyle(.plain)
-            }
-
-            // Hero banner
-            if !bannerDismissed {
-                heroBanner
-            }
-
-            // Search
-            HStack(spacing: 8) {
-                Image(systemName: "magnifyingglass")
-                    .foregroundColor(.secondary)
-                    .font(.system(size: 12))
-                TextField("Search snippets...", text: $searchText)
-                    .textFieldStyle(.plain)
-                    .font(.system(size: 12))
-                if !searchText.isEmpty {
-                    Button(action: { searchText = "" }) {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundColor(.secondary)
-                            .font(.system(size: 11))
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack {
+                    Text("Prompts")
+                        .font(.title2)
+                        .fontWeight(.semibold)
+                    Spacer()
+                    Button(action: addSnippet) {
+                        Text("New Prompt")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 6)
+                            .background(RoundedRectangle(cornerRadius: 8).fill(Color.primary))
                     }
                     .buttonStyle(.plain)
                 }
-            }
-            .padding(8)
-            .background(RoundedRectangle(cornerRadius: 8).fill(Color.gray.opacity(0.08)))
 
-            // Count
-            Text("\(snippets.count) \(snippets.count == 1 ? "snippet" : "snippets")")
-                .font(.caption)
-                .foregroundColor(.secondary)
-
-            Divider()
-
-            // Content
-            if filteredSnippets.isEmpty {
-                VStack(spacing: 8) {
-                    Image(systemName: "text.quote")
-                        .font(.system(size: 28))
-                        .foregroundColor(.secondary)
-                        .padding(.top, 24)
-                    Text(snippets.isEmpty ? "No snippets yet" : "No matching snippets")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    Text(snippets.isEmpty ? "Click \"Add new\" to create a text expansion shortcut." : "Try a different search term.")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                if !bannerDismissed {
+                    heroBanner
                 }
-                .frame(maxWidth: .infinity, alignment: .top)
-            } else {
-                // Column headers
-                HStack(spacing: 8) {
-                    Text("Trigger phrase")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    Text("Expands to")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    Color.clear.frame(width: 28)
-                }
-                .padding(.horizontal, 4)
 
-                ScrollView {
-                    LazyVStack(spacing: 6) {
-                        ForEach(filteredSnippets) { snippet in
-                            if let index = snippets.firstIndex(where: { $0.id == snippet.id }) {
-                                SnippetEntryRow(
-                                    snippet: $snippets[index],
-                                    isEditing: editingSnippetID == snippet.id,
-                                    onTap: { editingSnippetID = snippet.id },
-                                    onDelete: { deleteSnippet(snippet.id) },
-                                    onCommit: {
-                                        editingSnippetID = nil
-                                        saveSnippets()
+                SettingsCard {
+                    VStack(alignment: .leading, spacing: 10) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "magnifyingglass")
+                                .foregroundColor(.secondary)
+                                .font(.system(size: 12))
+                            TextField("Search prompts...", text: $searchText)
+                                .textFieldStyle(.plain)
+                                .font(.system(size: 12))
+                            if !searchText.isEmpty {
+                                Button(action: { searchText = "" }) {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .foregroundColor(.secondary)
+                                        .font(.system(size: 11))
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+
+                        Text("\(snippets.count) \(snippets.count == 1 ? "prompt" : "prompts")")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+
+                if filteredSnippets.isEmpty {
+                    SettingsCard {
+                        VStack(spacing: 8) {
+                            Image(systemName: "text.quote")
+                                .font(.system(size: 28))
+                                .foregroundColor(.secondary)
+                                .padding(.top, 8)
+                            Text(snippets.isEmpty ? "No prompts yet" : "No matching prompts")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            Text(snippets.isEmpty ? "Create trigger phrases that expand into reusable AI instructions. Click \"New Prompt\" to add one." : "Try a different search term.")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.center)
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                } else {
+                    SettingsCard {
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack(spacing: 8) {
+                                Text("Prompt trigger")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                Text("Prompt text")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                Color.clear.frame(width: 28)
+                            }
+                            .padding(.horizontal, 4)
+
+                            LazyVStack(spacing: 6) {
+                                ForEach(filteredSnippets) { snippet in
+                                    if let index = snippets.firstIndex(where: { $0.id == snippet.id }) {
+                                        SnippetEntryRow(
+                                            snippet: $snippets[index],
+                                            isEditing: editingSnippetID == snippet.id,
+                                            onTap: { editingSnippetID = snippet.id },
+                                            onDelete: { deleteSnippet(snippet.id) },
+                                            onCommit: {
+                                                editingSnippetID = nil
+                                                saveSnippets()
+                                            }
+                                        )
                                     }
-                                )
+                                }
                             }
                         }
                     }
                 }
             }
+            .padding(24)
         }
-        .padding()
         .onAppear { loadSnippets() }
+    }
+
+    // MARK: - Default prompts (shipped once)
+
+    static func defaultBuiltInPrompts() -> [Snippet] {
+        [
+            Snippet(
+                trigger: "debug brief",
+                expansion: "Create a debugging brief with observed behavior, expected behavior, suspected root causes, files to inspect, and verification steps."
+            ),
+            Snippet(
+                trigger: "refactor plan",
+                expansion: "Create a safe refactor plan. Preserve behavior, list files to modify, risks, tests, and rollback notes."
+            ),
+            Snippet(
+                trigger: "cursor task",
+                expansion: "Turn this into a precise Cursor agent instruction with objective, constraints, implementation steps, and acceptance criteria."
+            ),
+            Snippet(
+                trigger: "commit summary",
+                expansion: "Write a concise git commit message summarizing the changes described above."
+            ),
+            Snippet(
+                trigger: "architecture review",
+                expansion: "Review the described architecture. Identify strengths, risks, missing components, and recommendations."
+            ),
+        ]
     }
 
     // MARK: - Hero Banner
@@ -153,25 +180,24 @@ struct SnippetsSettingsView: View {
                 .buttonStyle(.plain)
             }
 
-            Text("The stuff you shouldn't have to re-type.")
+            Text("Reusable AI instructions from a single phrase.")
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundColor(.white)
 
-            Text("Save shortcuts to speak the things you type all the time — emails, links, addresses, bios — anything. Just speak and PsstWhisperOS expands them instantly.")
+            Text("Define a prompt trigger you can say while dictating. PsstWhisperOS expands it into full instructions for Cursor, Claude, or any workflow.")
                 .font(.system(size: 12))
                 .foregroundColor(.white.opacity(0.85))
                 .lineSpacing(2)
 
-            // Example pills
             VStack(alignment: .leading, spacing: 6) {
-                examplePill(trigger: "Linkedin", expansion: "linkedin.com/in/username")
-                examplePill(trigger: "intro email", expansion: "Hey, would love to find some time to...")
-                examplePill(trigger: "my calendly link", expansion: "calendly.com/you/invite-name")
+                examplePill(trigger: "debug brief", expansion: "Create a debugging brief with …")
+                examplePill(trigger: "cursor task", expansion: "Turn this into a precise Cursor agent instruction …")
+                examplePill(trigger: "commit summary", expansion: "Write a concise git commit message …")
             }
             .padding(.top, 4)
 
             Button(action: addSnippet) {
-                Text("Add new snippet")
+                Text("New prompt")
                     .font(.system(size: 12, weight: .medium))
                     .foregroundColor(.white)
                     .padding(.horizontal, 14)
@@ -189,7 +215,7 @@ struct SnippetsSettingsView: View {
                         colors: [
                             Color(red: 0.25, green: 0.15, blue: 0.55),
                             Color(red: 0.35, green: 0.20, blue: 0.65),
-                            Color(red: 0.50, green: 0.25, blue: 0.60)
+                            Color(red: 0.50, green: 0.25, blue: 0.60),
                         ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
@@ -237,15 +263,16 @@ struct SnippetsSettingsView: View {
 
     private func dismissBanner() {
         bannerDismissed = true
-        UserDefaults.standard.set(true, forKey: "snippetsBannerDismissed")
     }
 
     private func loadSnippets() {
-        guard let data = UserDefaults.standard.data(forKey: storageKey),
-              let decoded = try? JSONDecoder().decode([Snippet].self, from: data) else {
+        guard let data = UserDefaults.standard.data(forKey: storageKey) else {
+            // First run (or reset): no prompts storage yet — ship built-in defaults.
+            snippets = Self.defaultBuiltInPrompts()
+            saveSnippets()
             return
         }
-        snippets = decoded
+        snippets = (try? JSONDecoder().decode([Snippet].self, from: data)) ?? []
     }
 
     private func saveSnippets() {
@@ -266,7 +293,7 @@ private struct SnippetEntryRow: View {
     var body: some View {
         HStack(spacing: 8) {
             if isEditing {
-                TextField("Trigger phrase", text: $snippet.trigger)
+                TextField("Prompt trigger", text: $snippet.trigger)
                     .textFieldStyle(.roundedBorder)
                     .font(.system(size: 12))
                     .onSubmit { onCommit() }
@@ -275,7 +302,7 @@ private struct SnippetEntryRow: View {
                     .font(.caption)
                     .foregroundColor(.secondary)
 
-                TextField("Expands to...", text: $snippet.expansion)
+                TextField("Prompt text…", text: $snippet.expansion)
                     .textFieldStyle(.roundedBorder)
                     .font(.system(size: 12))
                     .onSubmit { onCommit() }

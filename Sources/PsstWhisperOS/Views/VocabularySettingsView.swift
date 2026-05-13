@@ -12,13 +12,12 @@ struct VocabularyEntry: Codable, Identifiable {
 }
 
 struct VocabularySettingsView: View {
-    @EnvironmentObject var appState: AppState
     @State private var entries: [VocabularyEntry] = []
     @State private var editingEntryID: UUID?
     @State private var searchText: String = ""
-    @AppStorage("dictionaryBannerDismissed") private var bannerDismissed: Bool = false
+    @AppStorage(StorageKeys.vocabularyBannerDismissed) private var bannerDismissed: Bool = false
 
-    private let storageKey = "vocabularyEntries"
+    private let storageKey = StorageKeys.vocabularyEntries
 
     private var filteredEntries: [VocabularyEntry] {
         if searchText.isEmpty { return entries }
@@ -27,110 +26,112 @@ struct VocabularySettingsView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            // Header
-            HStack {
-                Text("Dictionary")
-                    .font(.title2)
-                    .fontWeight(.semibold)
-                Spacer()
-                Button(action: addEntry) {
-                    Label("Add new", systemImage: "plus")
-                }
-                .controlSize(.small)
-            }
-
-            // Hero banner
-            if !bannerDismissed {
-                heroBanner
-            }
-
-            // Count + import/export
-            HStack {
-                Text("\(entries.count) \(entries.count == 1 ? "word" : "words")")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-
-                Spacer()
-
-                Button(action: importEntries) {
-                    Label("Import", systemImage: "square.and.arrow.down")
-                }
-                .controlSize(.small)
-
-                Button(action: exportEntries) {
-                    Label("Export", systemImage: "square.and.arrow.up")
-                }
-                .controlSize(.small)
-                .disabled(entries.isEmpty)
-            }
-
-            // Search
-            if !entries.isEmpty {
-                HStack(spacing: 6) {
-                    Image(systemName: "magnifyingglass")
-                        .foregroundColor(.secondary)
-                        .font(.caption)
-                    TextField("Search words...", text: $searchText)
-                        .textFieldStyle(.plain)
-                        .font(.callout)
-                }
-                .padding(6)
-                .background(RoundedRectangle(cornerRadius: 8).fill(Color.gray.opacity(0.08)))
-                .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.gray.opacity(0.15), lineWidth: 1))
-            }
-
-            Divider()
-
-            if entries.isEmpty {
-                VStack(spacing: 8) {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                HStack {
+                    Text("Vocabulary")
+                        .font(.title2)
+                        .fontWeight(.semibold)
                     Spacer()
-                    Image(systemName: "text.book.closed")
-                        .font(.system(size: 28))
-                        .foregroundColor(.secondary)
-                    Text("No words yet")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    Text("Click \"Add new\" to teach PsstWhisperOS a word.")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    Spacer()
+                    Button(action: addEntry) {
+                        Label("Add new", systemImage: "plus")
+                    }
+                    .controlSize(.small)
                 }
-                .frame(maxWidth: .infinity)
-            } else if filteredEntries.isEmpty {
-                VStack(spacing: 8) {
-                    Spacer()
-                    Image(systemName: "magnifyingglass")
-                        .font(.system(size: 28))
-                        .foregroundColor(.secondary.opacity(0.5))
-                    Text("No results for \"\(searchText)\"")
-                        .font(.callout)
-                        .foregroundColor(.secondary)
-                    Spacer()
+
+                if !bannerDismissed {
+                    heroBanner
                 }
-                .frame(maxWidth: .infinity)
-            } else {
-                ScrollView {
-                    LazyVStack(spacing: 6) {
-                        ForEach($entries) { $entry in
-                            if filteredEntries.contains(where: { $0.id == entry.id }) {
-                                DictionaryWordRow(
-                                    entry: $entry,
-                                    isEditing: editingEntryID == entry.id,
-                                    onTap: { editingEntryID = entry.id },
-                                    onDelete: { deleteEntry(entry.id) },
-                                    onCommit: {
-                                        editingEntryID = nil
-                                        saveEntries()
-                                    }
-                                )
+
+                SettingsCard {
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack {
+                            Text("\(entries.count) \(entries.count == 1 ? "word" : "words")")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+
+                            Spacer()
+
+                            Button(action: importEntries) {
+                                Label("Import", systemImage: "square.and.arrow.down")
+                            }
+                            .controlSize(.small)
+
+                            Button(action: exportEntries) {
+                                Label("Export", systemImage: "square.and.arrow.up")
+                            }
+                            .controlSize(.small)
+                            .disabled(entries.isEmpty)
+                        }
+
+                        if !entries.isEmpty {
+                            HStack(spacing: 6) {
+                                Image(systemName: "magnifyingglass")
+                                    .foregroundColor(.secondary)
+                                    .font(.caption)
+                                TextField("Search words...", text: $searchText)
+                                    .textFieldStyle(.plain)
+                                    .font(.callout)
+                            }
+                            .padding(6)
+                            .background(RoundedRectangle(cornerRadius: 8).fill(Color.gray.opacity(0.08)))
+                            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.gray.opacity(0.15), lineWidth: 1))
+                        }
+                    }
+                }
+
+                if entries.isEmpty {
+                    SettingsCard {
+                        VStack(spacing: 8) {
+                            Image(systemName: "text.book.closed")
+                                .font(.system(size: 28))
+                                .foregroundColor(.secondary)
+                            Text("No words yet")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            Text("Click \"Add new\" to teach PsstWhisperOS a word.")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                    }
+                } else if filteredEntries.isEmpty {
+                    SettingsCard {
+                        VStack(spacing: 8) {
+                            Image(systemName: "magnifyingglass")
+                                .font(.system(size: 28))
+                                .foregroundColor(.secondary.opacity(0.5))
+                            Text("No results for \"\(searchText)\"")
+                                .font(.callout)
+                                .foregroundColor(.secondary)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                    }
+                } else {
+                    SettingsCard {
+                        LazyVStack(spacing: 6) {
+                            ForEach($entries) { $entry in
+                                if filteredEntries.contains(where: { $0.id == entry.id }) {
+                                    VocabularyWordRow(
+                                        entry: $entry,
+                                        isEditing: editingEntryID == entry.id,
+                                        onTap: { editingEntryID = entry.id },
+                                        onDelete: { deleteEntry(entry.id) },
+                                        onCommit: {
+                                            editingEntryID = nil
+                                            saveEntries()
+                                        }
+                                    )
+                                }
                             }
                         }
                     }
                 }
             }
+            .padding(24)
         }
-        .padding()
         .onAppear { loadEntries() }
     }
 
@@ -139,7 +140,7 @@ struct VocabularySettingsView: View {
     private var heroBanner: some View {
         ZStack(alignment: .topTrailing) {
             VStack(alignment: .leading, spacing: 10) {
-                Label("Personal Dictionary", systemImage: "text.book.closed")
+                Label("Vocabulary", systemImage: "text.book.closed")
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(.white)
 
@@ -226,8 +227,8 @@ struct VocabularySettingsView: View {
               let jsonString = String(data: data, encoding: .utf8) else { return }
 
         let panel = NSSavePanel()
-        panel.title = "Export Dictionary"
-        panel.nameFieldStringValue = "dictionary.json"
+        panel.title = "Export Vocabulary"
+        panel.nameFieldStringValue = "vocabulary.json"
         panel.allowedContentTypes = [.json]
 
         panel.begin { response in
@@ -238,7 +239,7 @@ struct VocabularySettingsView: View {
 
     private func importEntries() {
         let panel = NSOpenPanel()
-        panel.title = "Import Dictionary"
+        panel.title = "Import Vocabulary"
         panel.allowedContentTypes = [.json]
         panel.allowsMultipleSelection = false
 
@@ -262,7 +263,7 @@ struct VocabularySettingsView: View {
 
 // MARK: - Word Row
 
-private struct DictionaryWordRow: View {
+private struct VocabularyWordRow: View {
     @Binding var entry: VocabularyEntry
     let isEditing: Bool
     let onTap: () -> Void

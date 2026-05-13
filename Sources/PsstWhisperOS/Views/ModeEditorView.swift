@@ -3,86 +3,87 @@ import SwiftUI
 struct ModeEditorView: View {
     @State var mode: CustomMode
     var onSave: (CustomMode) -> Void
-    @Environment(\.dismiss) var dismiss
+    @Environment(\.dismiss) private var dismiss
 
-    let iconOptions = [
+    private let iconOptions = [
         "text.bubble", "doc.text", "envelope", "message",
         "pencil", "highlighter", "bold", "italic",
         "list.bullet", "text.quote", "chevron.left.forwardslash.chevron.right",
-        "brain", "sparkles", "wand.and.stars"
+        "brain", "sparkles", "wand.and.stars",
     ]
 
     var body: some View {
-        VStack(spacing: 16) {
-            Text(mode.name.isEmpty ? "New Mode" : "Edit Mode")
-                .font(.headline)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                Text(mode.name.isEmpty ? "New Mode" : "Edit Mode")
+                    .font(.title2)
+                    .fontWeight(.semibold)
 
-            Form {
-                TextField("Name", text: $mode.name)
-
-                Picker("Icon", selection: $mode.icon) {
-                    ForEach(iconOptions, id: \.self) { icon in
-                        Label(icon, systemImage: icon).tag(icon)
+                SettingsCard {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Preset")
+                            .font(.headline)
+                        TextField("Name", text: $mode.name)
+                            .textFieldStyle(.roundedBorder)
+                        Picker("Icon", selection: $mode.icon) {
+                            ForEach(iconOptions, id: \.self) { icon in
+                                Label(icon, systemImage: icon).tag(icon)
+                            }
+                        }
                     }
                 }
 
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Prompt / Template")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                SettingsCard {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Prompt / template")
+                            .font(.headline)
+                        TextEditor(text: $mode.prompt)
+                            .font(.body)
+                            .frame(minHeight: 120)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(Color.gray.opacity(0.25), lineWidth: 1)
+                            )
+                        Text("Use {{text}} as placeholder for the transcribed text")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                }
 
-                    TextEditor(text: $mode.prompt)
-                        .font(.body)
-                        .frame(minHeight: 100)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 6)
-                                .stroke(Color.gray.opacity(0.3), lineWidth: 1)
-                        )
+                SettingsCard {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Preview")
+                            .font(.headline)
+                        Text(previewText())
+                            .font(.callout)
+                            .padding(10)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(Color.gray.opacity(0.08))
+                            .cornerRadius(8)
+                    }
+                }
 
-                    Text("Use {{text}} as placeholder for the transcribed text")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
+                HStack {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                    .keyboardShortcut(.cancelAction)
+
+                    Spacer()
+
+                    Button("Save") {
+                        onSave(mode)
+                    }
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(mode.name.isEmpty)
                 }
             }
-            .formStyle(.grouped)
-
-            // Preview
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Preview")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-
-                let preview = previewText()
-                Text(preview)
-                    .font(.callout)
-                    .padding(8)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color.gray.opacity(0.1))
-                    .cornerRadius(6)
-            }
-            .padding(.horizontal)
-
-            HStack {
-                Button("Cancel") {
-                    dismiss()
-                }
-                .keyboardShortcut(.cancelAction)
-
-                Spacer()
-
-                Button("Save") {
-                    onSave(mode)
-                }
-                .keyboardShortcut(.defaultAction)
-                .disabled(mode.name.isEmpty)
-            }
-            .padding(.horizontal)
+            .padding(24)
         }
-        .padding()
-        .frame(width: 400, height: 450)
+        .frame(width: 420, height: 520)
     }
 
-    func previewText() -> String {
+    private func previewText() -> String {
         let sampleText = "Hello this is a sample transcription"
         if mode.prompt.contains("{{text}}") {
             return mode.prompt.replacingOccurrences(of: "{{text}}", with: sampleText)

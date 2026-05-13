@@ -34,141 +34,142 @@ struct HistorySettingsView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("Transcription History")
-                    .font(.headline)
-                Spacer()
-                if !history.isEmpty {
-                    Button(role: .destructive, action: clearHistory) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "trash")
-                            Text("Clear History")
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                HStack {
+                    Text("History")
+                        .font(.title2)
+                        .fontWeight(.semibold)
+                    Spacer()
+                    if !history.isEmpty {
+                        Button(role: .destructive, action: clearHistory) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "trash")
+                                Text("Clear History")
+                            }
+                            .font(.caption)
                         }
-                        .font(.caption)
+                        .buttonStyle(.plain)
+                        .foregroundColor(.red)
                     }
-                    .buttonStyle(.plain)
-                    .foregroundColor(.red)
                 }
-            }
 
-            if !history.isEmpty {
-                HStack(spacing: 6) {
-                    Image(systemName: "magnifyingglass")
-                        .foregroundColor(.secondary)
-                        .font(.caption)
-                    TextField("Search transcriptions...", text: $searchText)
-                        .textFieldStyle(.plain)
-                        .font(.callout)
+                if !history.isEmpty {
+                    SettingsCard {
+                        HStack(spacing: 6) {
+                            Image(systemName: "magnifyingglass")
+                                .foregroundColor(.secondary)
+                                .font(.caption)
+                            TextField("Search transcriptions...", text: $searchText)
+                                .textFieldStyle(.plain)
+                                .font(.callout)
+                        }
+                    }
                 }
-                .padding(6)
-                .background(RoundedRectangle(cornerRadius: 8).fill(Color.gray.opacity(0.08)))
-                .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.gray.opacity(0.15), lineWidth: 1))
-            }
 
-            if history.isEmpty {
-                VStack(spacing: 12) {
-                    Spacer()
-                    Image(systemName: "clock.arrow.circlepath")
-                        .font(.system(size: 36))
-                        .foregroundColor(.secondary.opacity(0.5))
-                    Text("No transcriptions yet. Start recording to build your history.")
-                        .font(.callout)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                    Spacer()
-                }
-                .frame(maxWidth: .infinity)
-            } else if filteredHistory.isEmpty {
-                VStack(spacing: 8) {
-                    Spacer()
-                    Image(systemName: "magnifyingglass")
-                        .font(.system(size: 28))
-                        .foregroundColor(.secondary.opacity(0.5))
-                    Text("No results for \"\(searchText)\"")
-                        .font(.callout)
-                        .foregroundColor(.secondary)
-                    Spacer()
-                }
-                .frame(maxWidth: .infinity)
-            } else {
-                ScrollView {
-                    LazyVStack(spacing: 0) {
-                        ForEach(filteredHistory) { record in
-                            let isExpanded = expandedRecordID == record.id
+                if history.isEmpty {
+                    SettingsCard {
+                        VStack(spacing: 12) {
+                            Image(systemName: "clock.arrow.circlepath")
+                                .font(.system(size: 36))
+                                .foregroundColor(.secondary.opacity(0.5))
+                            Text("No transcriptions yet. Start recording to build your history.")
+                                .font(.callout)
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.center)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                    }
+                } else if filteredHistory.isEmpty {
+                    SettingsCard {
+                        VStack(spacing: 8) {
+                            Image(systemName: "magnifyingglass")
+                                .font(.system(size: 28))
+                                .foregroundColor(.secondary.opacity(0.5))
+                            Text("No results for \"\(searchText)\"")
+                                .font(.callout)
+                                .foregroundColor(.secondary)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                    }
+                } else {
+                    SettingsCard {
+                        LazyVStack(spacing: 0) {
+                            ForEach(filteredHistory) { record in
+                                let isExpanded = expandedRecordID == record.id
 
-                            VStack(alignment: .leading, spacing: 6) {
-                                HStack(spacing: 8) {
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text(relativeTimestamp(record.date))
-                                            .font(.caption)
-                                            .foregroundColor(.secondary)
-                                        Text(record.mode)
+                                VStack(alignment: .leading, spacing: 6) {
+                                    HStack(spacing: 8) {
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text(relativeTimestamp(record.date))
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
+                                            Text(record.mode)
+                                                .font(.caption2)
+                                                .foregroundColor(.accentColor)
+                                                .padding(.horizontal, 6)
+                                                .padding(.vertical, 1)
+                                                .background(
+                                                    Capsule()
+                                                        .fill(Color.accentColor.opacity(0.1))
+                                                )
+                                        }
+
+                                        Spacer()
+
+                                        Button(action: {
+                                            copyToClipboard(record.text)
+                                            copiedRecordID = record.id
+                                            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                                                if copiedRecordID == record.id {
+                                                    copiedRecordID = nil
+                                                }
+                                            }
+                                        }) {
+                                            Image(systemName: copiedRecordID == record.id ? "checkmark" : "doc.on.doc")
+                                                .font(.system(size: 12))
+                                                .foregroundColor(copiedRecordID == record.id ? .green : .secondary)
+                                        }
+                                        .buttonStyle(.plain)
+                                        .help("Copy to clipboard")
+                                    }
+
+                                    Text(isExpanded ? record.text : previewText(record.text))
+                                        .font(.callout)
+                                        .lineLimit(isExpanded ? nil : 2)
+                                        .foregroundColor(.primary)
+
+                                    if record.text.count > 80 {
+                                        Text(isExpanded ? "Show less" : "Show more")
                                             .font(.caption2)
                                             .foregroundColor(.accentColor)
-                                            .padding(.horizontal, 6)
-                                            .padding(.vertical, 1)
-                                            .background(
-                                                Capsule()
-                                                    .fill(Color.accentColor.opacity(0.1))
-                                            )
                                     }
-
-                                    Spacer()
-
-                                    Button(action: {
-                                        copyToClipboard(record.text)
-                                        copiedRecordID = record.id
-                                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                                            if copiedRecordID == record.id {
-                                                copiedRecordID = nil
-                                            }
+                                }
+                                .padding(.vertical, 8)
+                                .padding(.horizontal, 12)
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    withAnimation(.easeInOut(duration: 0.2)) {
+                                        if isExpanded {
+                                            expandedRecordID = nil
+                                        } else {
+                                            expandedRecordID = record.id
                                         }
-                                    }) {
-                                        Image(systemName: copiedRecordID == record.id ? "checkmark" : "doc.on.doc")
-                                            .font(.system(size: 12))
-                                            .foregroundColor(copiedRecordID == record.id ? .green : .secondary)
-                                    }
-                                    .buttonStyle(.plain)
-                                    .help("Copy to clipboard")
-                                }
-
-                                Text(isExpanded ? record.text : previewText(record.text))
-                                    .font(.callout)
-                                    .lineLimit(isExpanded ? nil : 2)
-                                    .foregroundColor(.primary)
-
-                                if record.text.count > 80 {
-                                    Text(isExpanded ? "Show less" : "Show more")
-                                        .font(.caption2)
-                                        .foregroundColor(.accentColor)
-                                }
-                            }
-                            .padding(.vertical, 8)
-                            .padding(.horizontal, 12)
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                withAnimation(.easeInOut(duration: 0.2)) {
-                                    if isExpanded {
-                                        expandedRecordID = nil
-                                    } else {
-                                        expandedRecordID = record.id
                                     }
                                 }
-                            }
 
-                            if record.id != filteredHistory.last?.id {
-                                Divider().padding(.leading, 12)
+                                if record.id != filteredHistory.last?.id {
+                                    Divider().padding(.leading, 12)
+                                }
                             }
                         }
                     }
-                    .padding(4)
-                    .background(RoundedRectangle(cornerRadius: 10).fill(Color.gray.opacity(0.06)))
-                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.gray.opacity(0.12), lineWidth: 1))
                 }
             }
+            .padding(24)
         }
-        .padding()
         .onAppear {
             history = HistorySettingsView.loadHistory()
         }
@@ -217,7 +218,7 @@ struct HistorySettingsView: View {
     // MARK: - Persistence
 
     static func loadHistory() -> [TranscriptionRecord] {
-        guard let data = UserDefaults.standard.data(forKey: "transcriptionHistory"),
+        guard let data = UserDefaults.standard.data(forKey: StorageKeys.transcriptionHistory),
               let records = try? JSONDecoder().decode([TranscriptionRecord].self, from: data) else {
             return []
         }
@@ -226,7 +227,7 @@ struct HistorySettingsView: View {
 
     static func saveHistory(_ records: [TranscriptionRecord]) {
         if let data = try? JSONEncoder().encode(records) {
-            UserDefaults.standard.set(data, forKey: "transcriptionHistory")
+            UserDefaults.standard.set(data, forKey: StorageKeys.transcriptionHistory)
         }
     }
 

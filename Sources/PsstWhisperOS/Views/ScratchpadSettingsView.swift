@@ -66,7 +66,7 @@ struct ScratchpadSettingsView: View {
         VStack(alignment: .leading, spacing: 0) {
             // Header toolbar
             HStack(spacing: 8) {
-                Text("Scratchpad")
+                Text("Notes")
                     .font(.headline)
 
                 Spacer()

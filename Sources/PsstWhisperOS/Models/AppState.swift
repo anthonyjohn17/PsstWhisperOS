@@ -69,6 +69,7 @@ class AppState: ObservableObject {
             StorageKeys.soundVolume: 1.0,
             StorageKeys.autoPaste: true,
             StorageKeys.formatText: true,
+            StorageKeys.appearanceMode: AppearanceMode.system.rawValue,
         ])
 
         loadSettings()

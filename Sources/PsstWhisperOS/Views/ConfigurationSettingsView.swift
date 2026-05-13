@@ -3,112 +3,159 @@ import ServiceManagement
 
 struct ConfigurationSettingsView: View {
     @EnvironmentObject var appState: AppState
-    @AppStorage("showInDock") private var showInDock = false
+    @AppStorage(StorageKeys.showInDock) private var showInDock = false
+    @AppStorage(StorageKeys.appearanceMode) private var appearanceRaw: String = AppearanceMode.system.rawValue
+
+    private var appearanceMode: Binding<AppearanceMode> {
+        Binding(
+            get: { AppearanceMode(rawValue: appearanceRaw) ?? .system },
+            set: {
+                appearanceRaw = $0.rawValue
+                AppearanceMode.postDidChange()
+            }
+        )
+    }
 
     var body: some View {
-        Form {
-            Section("Shortcuts") {
-                VStack(spacing: 4) {
-                    Text("Recording Shortcuts")
-                        .font(.headline)
-                    Text("Both shortcuts are always active. Hold for quick dictation, toggle for hands-free.")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 4)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                Text("Configuration")
+                    .font(.title2)
+                    .fontWeight(.semibold)
 
-                ConfigShortcutCard(
-                    title: "Hold",
-                    subtitle: "Hold to record, release to stop",
-                    icon: "hand.tap",
-                    combo: $appState.hotkeyConfig.holdKey
-                )
+                SettingsCard {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Appearance")
+                            .font(.headline)
+                        Text("Override light or dark mode for PsstWhisperOS windows, or follow the system.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
 
-                ConfigShortcutCard(
-                    title: "Toggle",
-                    subtitle: "Press to start, press again to stop",
-                    icon: "arrow.triangle.2.circlepath",
-                    combo: $appState.hotkeyConfig.toggleCombo
-                )
-
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("How they work together")
-                        .font(.caption)
-                        .fontWeight(.medium)
-                        .foregroundColor(.secondary)
-
-                    ConfigFlowRow(icon: "1.circle.fill", text: "Hold \(appState.hotkeyConfig.holdKey.displayString) to quick-dictate")
-                    ConfigFlowRow(icon: "2.circle.fill", text: "While holding, press \(comboKeyName) to lock recording on")
-                    ConfigFlowRow(icon: "3.circle.fill", text: "Press \(appState.hotkeyConfig.toggleCombo.displayString) again or tap \(appState.hotkeyConfig.holdKey.displayString) to stop")
-                }
-                .padding(12)
-                .background(RoundedRectangle(cornerRadius: 10).fill(Color.blue.opacity(0.04)))
-            }
-
-            Section("Behavior") {
-                Toggle("Auto-paste after recording", isOn: $appState.autoPaste)
-                    .onChange(of: appState.autoPaste) {
-                        appState.saveSettings()
+                        PillPicker(
+                            options: [.system, .light, .dark],
+                            selection: appearanceMode,
+                            title: { $0.shortTitle },
+                            systemImage: { $0.systemImageName }
+                        )
                     }
-                Toggle("Apply text formatting", isOn: $appState.formatText)
-                    .onChange(of: appState.formatText) {
-                        appState.saveSettings()
-                    }
-            }
-
-            Section("System") {
-                Toggle("Launch at login", isOn: launchAtLoginBinding)
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Toggle("Show in Dock", isOn: $showInDock)
-                    Text("Requires app restart to take effect.")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
                 }
-            }
 
-            Section("Permissions") {
-                ConfigPermissionRow(icon: "mic.fill", label: "Microphone", granted: appState.permissionsGranted)
-                if !appState.permissionsGranted {
-                    Button("Open Microphone Settings") {
-                        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone") {
-                            NSWorkspace.shared.open(url)
+                SettingsCard {
+                    VStack(alignment: .leading, spacing: 12) {
+                        VStack(spacing: 4) {
+                            Text("Recording Shortcuts")
+                                .font(.headline)
+                            Text("Both shortcuts are always active. Hold for quick dictation, toggle for hands-free.")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.center)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 4)
+
+                        ConfigShortcutCard(
+                            title: "Hold",
+                            subtitle: "Hold to record, release to stop",
+                            icon: "hand.tap",
+                            combo: $appState.hotkeyConfig.holdKey
+                        )
+
+                        ConfigShortcutCard(
+                            title: "Toggle",
+                            subtitle: "Press to start, press again to stop",
+                            icon: "arrow.triangle.2.circlepath",
+                            combo: $appState.hotkeyConfig.toggleCombo
+                        )
+
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("How they work together")
+                                .font(.caption)
+                                .fontWeight(.medium)
+                                .foregroundColor(.secondary)
+
+                            ConfigFlowRow(icon: "1.circle.fill", text: "Hold \(appState.hotkeyConfig.holdKey.displayString) to quick-dictate")
+                            ConfigFlowRow(icon: "2.circle.fill", text: "While holding, press \(comboKeyName) to lock recording on")
+                            ConfigFlowRow(icon: "3.circle.fill", text: "Press \(appState.hotkeyConfig.toggleCombo.displayString) again or tap \(appState.hotkeyConfig.holdKey.displayString) to stop")
+                        }
+                        .padding(12)
+                        .background(RoundedRectangle(cornerRadius: 10).fill(Color.blue.opacity(0.04)))
+                    }
+                }
+
+                SettingsCard {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Behavior")
+                            .font(.headline)
+                        ToggleRow(title: "Auto-paste after recording", isOn: $appState.autoPaste)
+                            .onChange(of: appState.autoPaste) {
+                                appState.saveSettings()
+                            }
+                        ToggleRow(title: "Apply text formatting", isOn: $appState.formatText)
+                            .onChange(of: appState.formatText) {
+                                appState.saveSettings()
+                            }
+                    }
+                }
+
+                SettingsCard {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("System")
+                            .font(.headline)
+                        ToggleRow(title: "Launch at login", isOn: launchAtLoginBinding)
+                        VStack(alignment: .leading, spacing: 4) {
+                            ToggleRow(title: "Show in Dock", isOn: $showInDock)
+                            Text("Requires app restart to take effect.")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
                         }
                     }
-                    .controlSize(.small)
-                }
-                ConfigPermissionRow(icon: "hand.raised.fill", label: "Accessibility", granted: appState.hotkeyManager.accessibilityGranted)
-                if !appState.hotkeyManager.accessibilityGranted {
-                    Button("Open Accessibility Settings") {
-                        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
-                            NSWorkspace.shared.open(url)
-                        }
-                    }
-                    .controlSize(.small)
-                }
-                ConfigPermissionRow(icon: "keyboard", label: "Input Monitoring", granted: appState.hotkeyManager.inputMonitoringGranted)
-                if !appState.hotkeyManager.inputMonitoringGranted {
-                    Button("Open Input Monitoring Settings") {
-                        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent") {
-                            NSWorkspace.shared.open(url)
-                        }
-                    }
-                    .controlSize(.small)
                 }
 
-                Button("Restart App") {
-                    ApplicationRelauncher.relaunch()
-                }
-                .controlSize(.small)
+                SettingsCard {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Permissions")
+                            .font(.headline)
+                        ConfigPermissionRow(icon: "mic.fill", label: "Microphone", granted: appState.permissionsGranted)
+                        if !appState.permissionsGranted {
+                            Button("Open Microphone Settings") {
+                                if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone") {
+                                    NSWorkspace.shared.open(url)
+                                }
+                            }
+                            .controlSize(.small)
+                        }
+                        ConfigPermissionRow(icon: "hand.raised.fill", label: "Accessibility", granted: appState.hotkeyManager.accessibilityGranted)
+                        if !appState.hotkeyManager.accessibilityGranted {
+                            Button("Open Accessibility Settings") {
+                                if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
+                                    NSWorkspace.shared.open(url)
+                                }
+                            }
+                            .controlSize(.small)
+                        }
+                        ConfigPermissionRow(icon: "keyboard", label: "Input Monitoring", granted: appState.hotkeyManager.inputMonitoringGranted)
+                        if !appState.hotkeyManager.inputMonitoringGranted {
+                            Button("Open Input Monitoring Settings") {
+                                if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent") {
+                                    NSWorkspace.shared.open(url)
+                                }
+                            }
+                            .controlSize(.small)
+                        }
 
-                Text("After granting Accessibility or Input Monitoring, restart once from here if hotkeys still do not work.")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                        Button("Restart App") {
+                            ApplicationRelauncher.relaunch()
+                        }
+                        .controlSize(.small)
+
+                        Text("After granting Accessibility or Input Monitoring, restart once from here if hotkeys still do not work.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
             }
+            .padding(24)
         }
-        .formStyle(.grouped)
         .onChange(of: appState.hotkeyConfig) {
             appState.hotkeyManager.updateConfig(appState.hotkeyConfig)
             appState.saveSettings()

@@ -40,9 +40,29 @@ final class SettingsWindowController {
 
     private var window: NSWindow?
     private var hostingView: NSHostingView<AnyView>?
+    private var appearanceObserver: NSObjectProtocol?
+
+    private init() {
+        appearanceObserver = NotificationCenter.default.addObserver(
+            forName: .psstWhisperOSAppearanceDidChange,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.applyAppearanceToSettingsWindow()
+            }
+        }
+    }
+
+    deinit {
+        if let appearanceObserver {
+            NotificationCenter.default.removeObserver(appearanceObserver)
+        }
+    }
 
     func open(appState: AppState) {
         if let existing = window, existing.isVisible {
+            AppAppearance.apply(to: existing)
             existing.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
             return
@@ -67,12 +87,20 @@ final class SettingsWindowController {
         win.level = .floating  // Ensure it appears above other windows
         window = win
 
+        AppAppearance.apply(to: win)
+
         win.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
 
         // Drop from floating to normal after it's visible so it behaves like a regular window
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
             win.level = .normal
+        }
+    }
+
+    private func applyAppearanceToSettingsWindow() {
+        if let win = window {
+            AppAppearance.apply(to: win)
         }
     }
 }

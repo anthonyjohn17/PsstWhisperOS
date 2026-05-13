@@ -35,7 +35,7 @@ enum WritingStyle: String, CaseIterable {
     }
 
     static func current() -> WritingStyle {
-        let raw = UserDefaults.standard.string(forKey: "writingStyle") ?? "formal"
+        let raw = UserDefaults.standard.string(forKey: StorageKeys.writingStyle) ?? "formal"
         return WritingStyle(rawValue: raw) ?? .formal
     }
 }
@@ -44,13 +44,13 @@ enum WritingStyle: String, CaseIterable {
 
 struct StyleSettingsView: View {
     @EnvironmentObject var appState: AppState
-    @AppStorage("writingStyle") private var selectedStyle: String = "formal"
-    @AppStorage("styleBannerDismissed") private var bannerDismissed: Bool = false
+    @AppStorage(StorageKeys.writingStyle) private var selectedStyle: String = "formal"
+    @AppStorage(StorageKeys.styleBannerDismissed) private var bannerDismissed: Bool = false
     @State private var editingMode: CustomMode?
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 20) {
                 Text("Styles")
                     .font(.title2)
                     .fontWeight(.semibold)
@@ -59,81 +59,39 @@ struct StyleSettingsView: View {
                     heroBanner
                 }
 
-                // MARK: - Writing Style Cards
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Writing Style")
-                        .font(.headline)
-                    Text("Controls capitalization and punctuation across all transcriptions.")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                SettingsCard {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Writing Style")
+                            .font(.headline)
+                        Text("Controls capitalization and punctuation across all transcriptions.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
 
-                    HStack(spacing: 12) {
-                        ForEach(WritingStyle.allCases, id: \.self) { style in
-                            StyleCard(
-                                style: style,
-                                isSelected: selectedStyle == style.rawValue,
-                                onSelect: { selectedStyle = style.rawValue }
-                            )
-                        }
-                    }
-                }
-
-                Divider()
-
-                // MARK: - Built-in Modes (now part of Styles)
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Built-in Styles")
-                        .font(.headline)
-
-                    VStack(spacing: 0) {
-                        ForEach(TranscriptionMode.BuiltIn.allCases) { mode in
-                            BuiltInStyleRow(
-                                mode: mode,
-                                appState: appState,
-                                editingMode: $editingMode
-                            )
-                            if mode != TranscriptionMode.BuiltIn.allCases.last {
-                                Divider().padding(.leading, 48)
+                        HStack(spacing: 12) {
+                            ForEach(WritingStyle.allCases, id: \.self) { style in
+                                StyleCard(
+                                    style: style,
+                                    isSelected: selectedStyle == style.rawValue,
+                                    onSelect: { selectedStyle = style.rawValue }
+                                )
                             }
                         }
                     }
-                    .padding(4)
-                    .background(RoundedRectangle(cornerRadius: 10).fill(Color.gray.opacity(0.06)))
-                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.gray.opacity(0.12), lineWidth: 1))
                 }
 
-                Divider()
-
-                // MARK: - Custom Styles
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Text("Custom Styles")
+                SettingsCard {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Built-in Styles")
                             .font(.headline)
-                        Spacer()
-                        Button(action: {
-                            editingMode = CustomMode()
-                        }) {
-                            Label("Add new", systemImage: "plus")
-                        }
-                        .controlSize(.small)
-                    }
 
-                    if appState.customModes.isEmpty {
-                        VStack(spacing: 8) {
-                            Text("No custom styles yet. Create one to define your own transcription formatting.")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                                .padding(.vertical, 8)
-                        }
-                    } else {
                         VStack(spacing: 0) {
-                            ForEach(appState.customModes) { mode in
-                                CustomStyleRow(
+                            ForEach(TranscriptionMode.BuiltIn.allCases) { mode in
+                                BuiltInStyleRow(
                                     mode: mode,
                                     appState: appState,
                                     editingMode: $editingMode
                                 )
-                                if mode.id != appState.customModes.last?.id {
+                                if mode != TranscriptionMode.BuiltIn.allCases.last {
                                     Divider().padding(.leading, 48)
                                 }
                             }
@@ -144,7 +102,44 @@ struct StyleSettingsView: View {
                     }
                 }
 
-                Spacer()
+                SettingsCard {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Text("Custom Styles")
+                                .font(.headline)
+                            Spacer()
+                            Button(action: {
+                                editingMode = CustomMode()
+                            }) {
+                                Label("Add new", systemImage: "plus")
+                            }
+                            .controlSize(.small)
+                        }
+
+                        if appState.customModes.isEmpty {
+                            Text("No custom styles yet. Create one to define your own transcription formatting.")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .padding(.vertical, 8)
+                        } else {
+                            VStack(spacing: 0) {
+                                ForEach(appState.customModes) { mode in
+                                    CustomStyleRow(
+                                        mode: mode,
+                                        appState: appState,
+                                        editingMode: $editingMode
+                                    )
+                                    if mode.id != appState.customModes.last?.id {
+                                        Divider().padding(.leading, 48)
+                                    }
+                                }
+                            }
+                            .padding(4)
+                            .background(RoundedRectangle(cornerRadius: 10).fill(Color.gray.opacity(0.06)))
+                            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.gray.opacity(0.12), lineWidth: 1))
+                        }
+                    }
+                }
             }
             .padding(24)
         }

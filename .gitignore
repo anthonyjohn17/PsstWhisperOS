@@ -28,3 +28,6 @@ DerivedData/
 
 # Claude Code
 .claude/
+
+# Cursor
+.cursor/

@@ -6,6 +6,7 @@ import Cocoa
 struct RecordingOverlayView: View {
     @ObservedObject var levelMonitor: AudioLevelMonitor
     @ObservedObject var hotkeyManager: HotkeyManager
+    @Environment(\.colorScheme) private var colorScheme
 
     private var isProcessing: Bool {
         levelMonitor.mode == .processing
@@ -44,16 +45,25 @@ struct RecordingOverlayView: View {
                 .frame(width: 12, height: 12)
             Text("Loading model…")
                 .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(.white.opacity(0.7))
+                .foregroundStyle(colorScheme == .dark ? Color.white.opacity(0.85) : Color.primary)
         }
     }
 
     private var loadingPillBackground: some View {
         Capsule()
-            .fill(Color(nsColor: NSColor(white: 0.11, alpha: 1)))
+            .fill(
+                colorScheme == .dark
+                    ? Color(nsColor: NSColor(white: 0.11, alpha: 1))
+                    : Color(nsColor: .controlBackgroundColor)
+            )
             .overlay(
                 Capsule()
-                    .strokeBorder(Color(nsColor: NSColor(white: 0.24, alpha: 1)), lineWidth: 1)
+                    .strokeBorder(
+                        colorScheme == .dark
+                            ? Color(nsColor: NSColor(white: 0.24, alpha: 1))
+                            : Color.gray.opacity(0.25),
+                        lineWidth: 1
+                    )
             )
     }
 }
@@ -65,6 +75,27 @@ final class RecordingOverlayController {
     static let shared = RecordingOverlayController()
 
     private var panel: NSPanel?
+    private var appearanceObserver: NSObjectProtocol?
+
+    private init() {
+        appearanceObserver = NotificationCenter.default.addObserver(
+            forName: .psstWhisperOSAppearanceDidChange,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                guard let self else { return }
+                guard let panel = self.panel else { return }
+                AppAppearance.apply(to: panel)
+            }
+        }
+    }
+
+    deinit {
+        if let appearanceObserver {
+            NotificationCenter.default.removeObserver(appearanceObserver)
+        }
+    }
 
     func show(appState: AppState) {
         guard panel == nil else { return }
@@ -94,7 +125,8 @@ final class RecordingOverlayController {
         p.ignoresMouseEvents = true
         p.contentView = hosting
 
-        // Center-bottom of main screen
+        AppAppearance.apply(to: p)
+
         if let screen = NSScreen.main {
             let screenFrame = screen.visibleFrame
             let x = screenFrame.midX - panelWidth / 2
