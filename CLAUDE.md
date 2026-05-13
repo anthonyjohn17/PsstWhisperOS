@@ -35,7 +35,7 @@ HotkeyManager (global key events via CGEvent tap)
   → AppState.startRecording / stopRecording
   → AudioEngine (AVAudioEngine mic capture, PCM buffers)
   → WhisperRecognizer (WhisperKit transcription)
-  → TextFormatter (vocabulary → snippets → cleanup → mode → style)
+  → TextFormatter (vocabulary → prompts/snippets expansion → cleanup → mode → style)
   → ClipboardManager (NSPasteboard + CGEvent Cmd+V paste)
 ```
 
@@ -44,6 +44,7 @@ HotkeyManager (global key events via CGEvent tap)
 - **AppState** (`Models/AppState.swift`) is the single `@MainActor ObservableObject` that all views observe. Nested service ObservableObjects forward `objectWillChange` to AppState via Combine.
 - **No sandboxing** — required for CGEvent tap (global hotkeys), CGEvent posting (paste automation), and system clipboard access.
 - **Menu bar only** — `LSUIElement=true` in Info.plist. Uses `MenuBarExtra` with `.menu` style. Settings window is a standalone `NSWindowController`, not a SwiftUI Scene.
+- **Appearance** — Settings window and recording overlay honor **System / Light / Dark** via `NSWindow.appearance` (`StorageKeys.appearanceMode`). Toggle in the settings sidebar footer and under Configuration.
 - **Two recording modes**: hold-to-record (release stops) and toggle (press to start, press again to stop). Both managed by `HotkeyManager` via a single CGEvent tap with `.defaultTap` (can consume events).
 - **Thread safety**: `AudioSampleBuffer` uses `NSLock` for audio thread → main actor buffer handoff. WhisperKit model loading runs on detached tasks.
 - **Permissions**: Requires Accessibility + Input Monitoring (for CGEvent tap) and Microphone. `HotkeyManager` polls every 2s until both are granted, opens System Settings on first failure.
@@ -56,7 +57,11 @@ HotkeyManager (global key events via CGEvent tap)
 | `WhisperRecognizer` | WhisperKit wrapper, model download/loading, partial + final transcription |
 | `HotkeyManager` | CGEvent tap on main run loop, hold/toggle state machine, accessibility checks |
 | `ClipboardManager` | NSPasteboard copy + CGEvent Cmd+V paste automation |
-| `TextFormatter` | Multi-stage pipeline: vocabulary replacements → snippet expansion → cleanup → mode formatting → writing style |
+| `TextFormatter` | Multi-stage pipeline: vocabulary replacements → prompt/snippet expansion → cleanup → mode formatting → writing style |
+
+### UI
+
+- **`Views/DesignSystem/`** — Shared settings UI: `AppTheme`, `AppearanceMode`, `SettingsCard`, `SettingsRow`, `ToggleRow`, `PillPicker`, `SidebarItemView`.
 
 ### Models
 

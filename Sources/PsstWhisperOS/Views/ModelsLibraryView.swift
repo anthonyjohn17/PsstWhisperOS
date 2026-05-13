@@ -15,53 +15,57 @@ struct ModelsLibraryView: View {
     ]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Models Library")
-                .font(.title2)
-                .fontWeight(.semibold)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                Text("Models Library")
+                    .font(.title2)
+                    .fontWeight(.semibold)
 
-            Text("Select a Whisper model for transcription. Larger models are more accurate but use more memory and are slower.")
-                .font(.caption)
-                .foregroundColor(.secondary)
+                SettingsCard {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Select a Whisper model for transcription. Larger models are more accurate but use more memory and are slower.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
 
-            ModelsLibraryStatusBanner(recognizer: appState.whisperRecognizer)
-
-            Divider()
-
-            ScrollView {
-                LazyVStack(spacing: 8) {
-                    ForEach(displayedModels, id: \.self) { model in
-                        ModelRow(
-                            model: model,
-                            info: modelInfo(model),
-                            isSelected: model == appState.whisperRecognizer.selectedModel,
-                            isRecommended: model == appState.whisperRecognizer.recommendedModel,
-                            recognizer: appState.whisperRecognizer
-                        )
+                        ModelsLibraryStatusBanner(recognizer: appState.whisperRecognizer)
                     }
+                }
 
-                    if hasMoreModels {
-                        Button {
-                            withAnimation(.easeInOut(duration: 0.2)) {
-                                showAllModels.toggle()
-                            }
-                        } label: {
-                            HStack {
-                                Text(showAllModels ? "Show fewer models" : "Show all \(allModels.count) models")
-                                    .font(.system(size: 12, weight: .medium))
-                                Image(systemName: showAllModels ? "chevron.up" : "chevron.down")
-                                    .font(.system(size: 10))
-                            }
-                            .foregroundColor(.accentColor)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 8)
+                SettingsCard {
+                    LazyVStack(spacing: 8) {
+                        ForEach(displayedModels, id: \.self) { model in
+                            ModelRow(
+                                model: model,
+                                info: modelInfo(model),
+                                isSelected: model == appState.whisperRecognizer.selectedModel,
+                                isRecommended: model == appState.whisperRecognizer.recommendedModel,
+                                recognizer: appState.whisperRecognizer
+                            )
                         }
-                        .buttonStyle(.plain)
+
+                        if hasMoreModels {
+                            Button {
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    showAllModels.toggle()
+                                }
+                            } label: {
+                                HStack {
+                                    Text(showAllModels ? "Show fewer models" : "Show all \(allModels.count) models")
+                                        .font(.system(size: 12, weight: .medium))
+                                    Image(systemName: showAllModels ? "chevron.up" : "chevron.down")
+                                        .font(.system(size: 10))
+                                }
+                                .foregroundColor(.accentColor)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 8)
+                            }
+                            .buttonStyle(.plain)
+                        }
                     }
                 }
             }
+            .padding(24)
         }
-        .padding()
         .onAppear {
             appState.whisperRecognizer.fetchAvailableModels()
         }

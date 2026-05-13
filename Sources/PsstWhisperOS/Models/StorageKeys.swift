@@ -17,7 +17,9 @@ enum StorageKeys {
     static let transcriptionHistory = "transcriptionHistory"
     static let scratchpadNotes = "scratchpadNotes"
     static let snippetsBannerDismissed = "snippetsBannerDismissed"
-    static let dictionaryBannerDismissed = "dictionaryBannerDismissed"
+    /// Legacy UserDefaults key; retained for existing installs.
+    static let vocabularyBannerDismissed = "dictionaryBannerDismissed"
     static let styleBannerDismissed = "styleBannerDismissed"
     static let showInDock = "showInDock"
+    static let appearanceMode = "appearanceMode"
 }
